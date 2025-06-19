@@ -321,14 +321,14 @@ def main():
         except Exception as e:
             print(f"    Error sending emergency stop: {str(e)}")
     
-    # Setup command handlers
+
     keyboard.on_press_key("1", lambda _: emergency_stop())
     keyboard.on_press_key("2", lambda _: start_video())
     keyboard.on_press_key("3", lambda _: send_command(command_socket, command_addr, "land"))
     keyboard.on_press_key("4", lambda _: configure_wifi(command_socket, command_addr))
     keyboard.on_press_key("6", lambda _: get_tello_status(command_socket, command_addr))
     keyboard.on_press_key("t", lambda _: send_command(command_socket, command_addr, "takeoff"))
-      print("""
+    print("""
     CONTROLS:
     ===========
     1) Emergency - stop motors immediately
