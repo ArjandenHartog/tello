@@ -307,8 +307,7 @@ def main():
             video_started = True
         else:
             print("    Video stream already started")
-            
-    # Define emergency stop function
+              # Define emergency stop function
     def emergency_stop():
         try:
             print("    EMERGENCY STOP ACTIVATED")
@@ -321,6 +320,15 @@ def main():
         except Exception as e:
             print(f"    Error sending emergency stop: {str(e)}")
     
+    # Define move up function (fly 50cm higher)
+    def move_up():
+        print("    Moving drone 50cm up...")
+        response = send_command(command_socket, command_addr, "up 50")
+        if response == "ok":
+            print("    Drone moved 50cm up successfully")
+        else:
+            print("    Failed to move drone up. Response:", response if response else "No response")
+    
     # Setup command handlers
     keyboard.on_press_key("1", lambda _: emergency_stop())
     keyboard.on_press_key("2", lambda _: start_video())
@@ -328,8 +336,9 @@ def main():
     keyboard.on_press_key("4", lambda _: configure_wifi(command_socket, command_addr))
     keyboard.on_press_key("6", lambda _: get_tello_status(command_socket, command_addr))
     keyboard.on_press_key("t", lambda _: send_command(command_socket, command_addr, "takeoff"))
-      print("""
-    CONTROLS:
+    keyboard.on_press_key("u", lambda _: move_up())
+    
+    print("""    CONTROLS:
     ===========
     1) Emergency - stop motors immediately
     2) Watch Video Stream
@@ -338,6 +347,7 @@ def main():
     5) Exit
     6) Show Drone Status (Diagnostics)
     T) Take Off (Press T key)
+    U) Move Up 50cm (Press U key)
     """)
     
     try:
