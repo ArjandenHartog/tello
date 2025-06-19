@@ -55,32 +55,31 @@ def check_connection(command_socket, command_addr):
     response = send_command(command_socket, command_addr, "command")
     
     if response == "ok":
-        print("   ✅ Connection verified!")
+        print("    Connection verified!")
         
         # Check battery level
         battery = send_command(command_socket, command_addr, "battery?")
         if battery and battery.isdigit():
-            print(f"   🔋 Battery level: {battery}%")
+            print(f"    Battery level: {battery}%")
             if int(battery) < 20:
-                print("   ⚠️ Warning: Battery level low!")
+                print("    Warning: Battery level low!")
         
         return True
     else:
-        print("   ❌ Connection failed! Make sure you're connected to Tello's WiFi network.")
-        print("   ℹ️ Tello WiFi name usually starts with 'TELLO-'")
+        print("    Connection failed! Make sure you're connected to Tello's WiFi network.")
+        print("   ℹ Tello WiFi name usually starts with 'TELLO-'")
         return False
 
 def watch_video_stream(command_socket, command_addr):
     """
     Start and display video stream from Tello
-    """
-    response = send_command(command_socket, command_addr, "streamon")
+    """    response = send_command(command_socket, command_addr, "streamon")
     if response != "ok":
-        print("   ❌ Failed to start video stream. Response:", response)
+        print("   Failed to start video stream. Response:", response)
         return False
-    
-    print("\n   🎥 Video streaming started!")
-    print("   ℹ️ Connecting to video stream (this may take a few seconds)...")
+        
+    print("\n   Video streaming started!")
+    print("   Connecting to video stream (this may take a few seconds)...")
     
     # Allow some time for streaming to initialize
     time.sleep(2)
@@ -91,17 +90,17 @@ def watch_video_stream(command_socket, command_addr):
         try:
             cap = cv2.VideoCapture('udp://192.168.10.1:11111')
             if cap.isOpened():
-                print("   ✅ Connected to video stream!")
+                print("    Connected to video stream!")
                 break
             else:
-                print(f"   ⚠️ Attempt {attempt+1}/3: Could not open video stream, retrying...")
+                print(f"    Attempt {attempt+1}/3: Could not open video stream, retrying...")
                 time.sleep(2)
         except Exception as e:
-            print(f"   ❌ Video stream error: {str(e)}")
+            print(f"    Video stream error: {str(e)}")
             time.sleep(2)
     
     if cap is None or not cap.isOpened():
-        print("   ❌ Failed to connect to video stream after multiple attempts")
+        print("    Failed to connect to video stream after multiple attempts")
         send_command(command_socket, command_addr, "streamoff")
         return False
     
@@ -128,14 +127,14 @@ def watch_video_stream(command_socket, command_addr):
                     break
             else:
                 # If we can't read a frame, try to reconnect
-                print("   ⚠️ Video frame lost, attempting to reconnect...")
+                print("    Video frame lost, attempting to reconnect...")
                 cap.release()
                 cap = cv2.VideoCapture('udp://192.168.10.1:11111')
                 if not cap.isOpened():
-                    print("   ❌ Failed to reconnect to video stream")
+                    print("    Failed to reconnect to video stream")
                     break
     except Exception as e:
-        print(f"   ❌ Error in video stream: {str(e)}")
+        print(f"    Error in video stream: {str(e)}")
     finally:
         if cap:
             cap.release()
@@ -148,16 +147,16 @@ def get_tello_status(command_socket, command_addr):
     """
     Get all available status information from Tello for debugging
     """
-    print("\n   📊 Requesting Tello status...")
+    print("\n    Requesting Tello status...")
     
     # Request status information
     response = send_command(command_socket, command_addr, "status?")
     if not response:
-        print("   ❌ Failed to get status information")
+        print("    Failed to get status information")
         return
         
     # Parse and display information
-    print("\n   📋 Tello Status Information:")
+    print("\n    Tello Status Information:")
     print("   " + "=" * 40)
     
     try:
@@ -167,7 +166,7 @@ def get_tello_status(command_socket, command_addr):
                 key, value = item.split(':') if ':' in item else (item, "N/A")
                 print(f"   {key.strip()}: {value.strip()}")
     except Exception as e:
-        print(f"   ❌ Error parsing status: {str(e)}")
+        print(f"    Error parsing status: {str(e)}")
         print(f"   Raw status: {response}")
     
     print("   " + "=" * 40)
@@ -176,26 +175,26 @@ def configure_wifi(command_socket, command_addr):
     """
     Configure Tello WiFi settings
     """
-    print("\n   🔄 Configure WiFi Settings")
-    print("   ⚠️ Warning: This will change the drone's WiFi settings and disconnect your current connection!")
+    print("\n    Configure WiFi Settings")
+    print("    Warning: This will change the drone's WiFi settings and disconnect your current connection!")
     
     ssid = input("\n   Enter new wifi SSID: ")
     password = input("   Enter new wifi password: ")
     
     if not ssid or not password:
-        print("   ❌ SSID and password cannot be empty!")
+        print("    SSID and password cannot be empty!")
         return False
         
     command = "wifi " + ssid + " " + password
     response = send_command(command_socket, command_addr, command)
     
     if response == "ok":
-        print("   ✅ WiFi settings changed successfully!")
-        print("   🔄 The drone will disconnect and connect to the new network.")
-        print(f"   ℹ️ New network: {ssid}")
+        print("    WiFi settings changed successfully!")
+        print("    The drone will disconnect and connect to the new network.")
+        print(f"   ℹ New network: {ssid}")
         return True
     else:
-        print("   ❌ Failed to change WiFi settings.")
+        print("    Failed to change WiFi settings.")
         print("   Response:", response if response else "No response")
         return False
 
@@ -204,7 +203,7 @@ def establish_connection(max_attempts=3):
     """
     Establish and verify connection with the Tello drone
     """
-    print("\n   🔄 Establishing connection with Tello drone...")
+    print("\n    Establishing connection with Tello drone...")
     
     for attempt in range(max_attempts):
         try:
@@ -223,17 +222,17 @@ def establish_connection(max_attempts=3):
             # Bind socket
             try:
                 command_socket.bind(('', 8889))
-                print("   ✅ Socket binding successful")
+                print("    Socket binding successful")
             except socket.error as e:
-                print(f"   ❌ Socket binding failed: {e}")
-                print("   ⚠️ Port 8889 might be in use by another application")
+                print(f"    Socket binding failed: {e}")
+                print("    Port 8889 might be in use by another application")
                 if attempt == max_attempts - 1:
                     return None
                 time.sleep(2)
                 continue
             
             # Enter SDK mode
-            print("   🔄 Sending command to enter SDK mode...")
+            print("    Sending command to enter SDK mode...")
             command_socket.sendto(b"command", command_addr)
             
             try:
@@ -241,24 +240,24 @@ def establish_connection(max_attempts=3):
                 response = response.decode().strip()
                 
                 if response == "ok":
-                    print("   ✅ Successfully entered SDK mode")
+                    print("    Successfully entered SDK mode")
                     return command_socket, command_addr
                 else:
-                    print(f"   ⚠️ Unexpected response to SDK mode: {response}")
+                    print(f"    Unexpected response to SDK mode: {response}")
             except socket.timeout:
-                print("   ❌ Timeout while waiting for SDK mode response")
-                print("   ⚠️ Is the drone powered on? Are you connected to Tello WiFi?")
+                print("    Timeout while waiting for SDK mode response")
+                print("    Is the drone powered on? Are you connected to Tello WiFi?")
             except Exception as e:
-                print(f"   ❌ Error during connection: {str(e)}")
+                print(f"    Error during connection: {str(e)}")
             
             time.sleep(2)
         
         except Exception as e:
-            print(f"   ❌ Connection error: {str(e)}")
+            print(f"    Connection error: {str(e)}")
             time.sleep(2)
     
-    print("   ❌ Failed to establish connection after multiple attempts")
-    print("   ℹ️ Troubleshooting tips:")
+    print("    Failed to establish connection after multiple attempts")
+    print("   ℹ Troubleshooting tips:")
     print("     1. Make sure the drone is powered on")
     print("     2. Connect to the Tello WiFi network (usually starts with 'TELLO-')")
     print("     3. Check if any other application is using port 8889")
@@ -267,21 +266,21 @@ def establish_connection(max_attempts=3):
 
 def main():
     print("""
-   🚁 Tello Drone Controller 🚁
+    Tello Drone Controller 
    ============================""")
     
-    print("   📱 Connect to Tello WiFi network and press <<Shift>> to continue")
-    print("   🔄 Waiting for connection...")
+    print("    Connect to Tello WiFi network and press <<Shift>> to continue")
+    print("    Waiting for connection...")
     
     while not keyboard.is_pressed("Shift"):
         pass
     
-    print("   🔄 Starting connection process...")
+    print("    Starting connection process...")
     
     # Establish connection
     connection_result = establish_connection()
     if not connection_result:
-        print("   ❌ Failed to establish connection")
+        print("    Failed to establish connection")
         input("   Press Enter to exit...")
         return
     
@@ -289,11 +288,11 @@ def main():
     
     # Verify connection with battery check
     if not check_connection(command_socket, command_addr):
-        print("   ❌ Connection verification failed")
+        print("    Connection verification failed")
         input("   Press Enter to exit...")
         return
     
-    print("   ✅ Control has been successfully established!")
+    print("    Control has been successfully established!")
     
     # Create video thread but don't start automatically
     video_thread = threading.Thread(target=watch_video_stream, args=(command_socket, command_addr))
@@ -307,34 +306,34 @@ def main():
             video_thread.start()
             video_started = True
         else:
-            print("   ⚠️ Video stream already started")
+            print("    Video stream already started")
     
-    # Setup command handlers
-    keyboard.on_press_key("1", lambda _: send_command(command_socket, command_addr, "emergency"))
+    # Setup command handlers    keyboard.on_press_key("1", lambda _: send_command(command_socket, command_addr, "emergency"))
     keyboard.on_press_key("2", lambda _: start_video())
     keyboard.on_press_key("3", lambda _: send_command(command_socket, command_addr, "land"))
     keyboard.on_press_key("4", lambda _: configure_wifi(command_socket, command_addr))
     keyboard.on_press_key("6", lambda _: get_tello_status(command_socket, command_addr))
+    keyboard.on_press_key("t", lambda _: send_command(command_socket, command_addr, "takeoff"))
     
-    print("""
-   🎮 CONTROLS:
+    print("""    CONTROLS:
    ===========
-   1️⃣  Emergency - stop motors immediately
-   2️⃣  Watch Video Stream
-   3️⃣  Land
-   4️⃣  Configure WiFi Password
-   5️⃣  Exit
-   6️⃣  Show Drone Status (Diagnostics)
+   1⃣  Emergency - stop motors immediately
+   2⃣  Watch Video Stream
+   3⃣  Land
+   4⃣  Configure WiFi Password
+   5⃣  Exit
+   6⃣  Show Drone Status (Diagnostics)
+   T⃣  Take Off (Press T key)
         """)
     
     try:
         while not keyboard.is_pressed("5"):
             time.sleep(0.1)  # Reduce CPU usage
     except KeyboardInterrupt:
-        print("\n   ℹ️ Program interrupted")
+        print("\n   ℹ Program interrupted")
     finally:
         # Clean up
-        print("\n   🔄 Shutting down...")
+        print("\n    Shutting down...")
         try:
             # Try to land the drone if it might be flying
             send_command(command_socket, command_addr, "land", debug=False)
@@ -344,14 +343,14 @@ def main():
         except:
             pass  # Ignore errors during shutdown
         
-        print("   ✅ Exited safely")
+        print("    Exited safely")
 
 
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
-        print(f"\n   ❌ Unexpected error: {str(e)}")
+        print(f"\n    Unexpected error: {str(e)}")
         print("   Detailed error information:")
         import traceback
         traceback.print_exc()
