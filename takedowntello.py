@@ -5,6 +5,8 @@ import cv2
 import threading
 import time
 import sys
+from inputs import get_gamepad
+import math
 
 
 def send_command(command_socket, command_addr, command, debug=True, retry=3, timeout=5):
@@ -265,11 +267,142 @@ def establish_connection(max_attempts=3):
     print("     4. Try restarting the drone")
     return None
 
+class XboxController(threading.Thread):
+    """
+    Xbox controller handling class. Manages controller inputs and converts them to drone commands.
+    """
+    def __init__(self, command_socket, command_addr):
+        threading.Thread.__init__(self)
+        self.command_socket = command_socket
+        self.command_addr = command_addr
+        self.running = False
+        self.daemon = True
+        
+        # Initialize controller state
+        self.left_thumb_y = 0  # Up/Down movement
+        self.last_command_time = time.time()
+        self.command_delay = 0.5  # Minimum time between commands (seconds)
+        
+    def run(self):
+        """
+        Main loop to read controller inputs and send commands
+        """
+        self.running = True
+        print("    Xbox controller support enabled. Connect your controller via Bluetooth.")
+        print("    Controls:")
+        print("    - Left thumbstick: Up/Down movement")
+        print("    - A button: Takeoff")
+        print("    - B button: Land")
+        print("    - X button: Emergency stop")
+        
+        while self.running:
+            try:
+                events = get_gamepad()
+                for event in events:
+                    if event.ev_type == "Absolute":
+                        self._handle_analog_input(event)
+                    elif event.ev_type == "Key":
+                        self._handle_button_press(event)
+                
+                # Check if we should send a movement command based on thumbstick position
+                self._process_movement_commands()
+                
+                # Small sleep to prevent high CPU usage
+                time.sleep(0.01)
+            except Exception as e:
+                if "No gamepad found" in str(e):
+                    print("    Waiting for Xbox controller connection...")
+                    time.sleep(3)  # Wait before trying again
+                else:
+                    print(f"    Controller error: {str(e)}")
+                    time.sleep(1)
+    
+    def _handle_analog_input(self, event):
+        """
+        Process analog inputs like thumbsticks
+        """
+        # Left thumbstick Y axis (up/down)
+        if event.code == "ABS_Y":
+            # Convert raw input (-32768 to 32767) to normalized value (-100 to 100)
+            self.left_thumb_y = -1 * self._map_stick_value(event.state)
+    
+    def _handle_button_press(self, event):
+        """
+        Process button presses
+        """
+        # Only handle button down events (value 1)
+        if event.state != 1:
+            return
+            
+        # A Button - Takeoff
+        if event.code == "BTN_SOUTH":
+            print("    A Button pressed: Takeoff")
+            send_command(self.command_socket, self.command_addr, "takeoff")
+            
+        # B Button - Land
+        elif event.code == "BTN_EAST":
+            print("    B Button pressed: Land")
+            send_command(self.command_socket, self.command_addr, "land")
+            
+        # X Button - Emergency stop
+        elif event.code == "BTN_WEST":
+            print("    X Button pressed: EMERGENCY STOP")
+            try:
+                # Send emergency command directly without waiting for response
+                self.command_socket.sendto(b"emergency", self.command_addr)
+                self.command_socket.sendto(b"emergency", self.command_addr)
+                self.command_socket.sendto(b"emergency", self.command_addr)
+            except Exception as e:
+                print(f"    Error sending emergency stop: {str(e)}")
+    
+    def _process_movement_commands(self):
+        """
+        Process movement commands based on thumbstick position
+        """
+        current_time = time.time()
+        # Only send commands if enough time has passed since last command
+        if current_time - self.last_command_time < self.command_delay:
+            return
+            
+        # Up/Down movement based on left thumbstick Y
+        if abs(self.left_thumb_y) > 30:  # Apply a deadzone
+            distance = 30  # Movement distance in cm
+            
+            if self.left_thumb_y > 0:
+                # Move up
+                print(f"    Moving up {distance}cm")
+                send_command(self.command_socket, self.command_addr, f"up {distance}")
+            else:
+                # Move down
+                print(f"    Moving down {distance}cm")
+                send_command(self.command_socket, self.command_addr, f"down {distance}")
+                
+            self.last_command_time = current_time
+    
+    def _map_stick_value(self, value):
+        """
+        Map raw thumbstick value to -100 to 100 range with a deadzone
+        """
+        # Normalize value from -32768/32767 to -100/100
+        normalized = value / 327.67
+        
+        # Apply deadzone (values between -15 and 15 become 0)
+        if abs(normalized) < 15:
+            return 0
+            
+        return normalized
+    
+    def stop(self):
+        """
+        Stop the controller thread
+        """
+        self.running = False
+
+
 def main():
     print("""
     Tello Drone Controller 
    ============================""")
-    
     print("    Connect to Tello WiFi network and press <<Shift>> to continue")
     print("    Waiting for connection...")
     
@@ -286,20 +419,24 @@ def main():
         return
     
     command_socket, command_addr = connection_result
-    
-    # Verify connection with battery check
+      # Verify connection with battery check
     if not check_connection(command_socket, command_addr):
         print("    Connection verification failed")
         input("   Press Enter to exit...")
         return
-    
+        
     print("    Control has been successfully established!")
     
     # Create video thread but don't start automatically
     video_thread = threading.Thread(target=watch_video_stream, args=(command_socket, command_addr))
     video_thread.daemon = True
     video_started = False
-      # Define video start function with closure to access video_started variable
+    
+    # Initialize Xbox controller thread
+    controller = XboxController(command_socket, command_addr)
+    controller.start()
+    
+    # Define video start function with closure to access video_started variable
     def start_video():
         nonlocal video_started
         if not video_started:
@@ -339,6 +476,7 @@ def main():
     keyboard.on_press_key("u", lambda _: move_up())
     
     print("""    CONTROLS:
+    ===========    KEYBOARD CONTROLS:
     ===========
     1) Emergency - stop motors immediately
     2) Watch Video Stream
@@ -348,7 +486,13 @@ def main():
     6) Show Drone Status (Diagnostics)
     T) Take Off (Press T key)
     U) Move Up 50cm (Press U key)
-    """)
+    
+    XBOX CONTROLLER:
+    ===========
+    Left Thumbstick: Up/Down movement
+    A Button: Takeoff
+    B Button: Land
+    X Button: Emergency Stop    """)
     
     try:
         while not keyboard.is_pressed("5"):
@@ -359,6 +503,9 @@ def main():
         # Clean up
         print("\n    Shutting down...")
         try:
+            # Stop controller thread
+            controller.stop()
+            
             # Try to land the drone if it might be flying
             send_command(command_socket, command_addr, "land", debug=False)
             time.sleep(1)
