@@ -73,7 +73,8 @@ def check_connection(command_socket, command_addr):
 def watch_video_stream(command_socket, command_addr):
     """
     Start and display video stream from Tello
-    """    response = send_command(command_socket, command_addr, "streamon")
+    """    
+    response = send_command(command_socket, command_addr, "streamon")
     if response != "ok":
         print("   Failed to start video stream. Response:", response)
         return False
