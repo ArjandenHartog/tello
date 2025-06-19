@@ -457,15 +457,6 @@ def main():
         except Exception as e:
             print(f"    Error sending emergency stop: {str(e)}")
     
-    # Define move up function (fly 50cm higher)
-    def move_up():
-        print("    Moving drone 50cm up...")
-        response = send_command(command_socket, command_addr, "up 50")
-        if response == "ok":
-            print("    Drone moved 50cm up successfully")
-        else:
-            print("    Failed to move drone up. Response:", response if response else "No response")
-    
     # Setup command handlers
     keyboard.on_press_key("1", lambda _: emergency_stop())
     keyboard.on_press_key("2", lambda _: start_video())
@@ -476,7 +467,6 @@ def main():
     keyboard.on_press_key("u", lambda _: move_up())
     
     print("""    CONTROLS:
-    ===========    KEYBOARD CONTROLS:
     ===========
     1) Emergency - stop motors immediately
     2) Watch Video Stream
