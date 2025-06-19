@@ -299,8 +299,7 @@ def main():
     video_thread = threading.Thread(target=watch_video_stream, args=(command_socket, command_addr))
     video_thread.daemon = True
     video_started = False
-    
-    # Define video start function with closure to access video_started variable
+      # Define video start function with closure to access video_started variable
     def start_video():
         nonlocal video_started
         if not video_started:
@@ -308,24 +307,38 @@ def main():
             video_started = True
         else:
             print("    Video stream already started")
+            
+    # Define emergency stop function
+    def emergency_stop():
+        try:
+            print("    EMERGENCY STOP ACTIVATED")
+            # Send emergency command directly without waiting for response
+            command_socket.sendto(b"emergency", command_addr)
+            # Send multiple times to ensure it's received
+            command_socket.sendto(b"emergency", command_addr)
+            command_socket.sendto(b"emergency", command_addr)
+            print("    Emergency stop command sent")
+        except Exception as e:
+            print(f"    Error sending emergency stop: {str(e)}")
     
-    # Setup command handlers    keyboard.on_press_key("1", lambda _: send_command(command_socket, command_addr, "emergency"))
+    # Setup command handlers
+    keyboard.on_press_key("1", lambda _: emergency_stop())
     keyboard.on_press_key("2", lambda _: start_video())
     keyboard.on_press_key("3", lambda _: send_command(command_socket, command_addr, "land"))
     keyboard.on_press_key("4", lambda _: configure_wifi(command_socket, command_addr))
     keyboard.on_press_key("6", lambda _: get_tello_status(command_socket, command_addr))
     keyboard.on_press_key("t", lambda _: send_command(command_socket, command_addr, "takeoff"))
-    
-    print("""    CONTROLS:
-   ===========
-   1⃣  Emergency - stop motors immediately
-   2⃣  Watch Video Stream
-   3⃣  Land
-   4⃣  Configure WiFi Password
-   5⃣  Exit
-   6⃣  Show Drone Status (Diagnostics)
-   T⃣  Take Off (Press T key)
-        """)
+      print("""
+    CONTROLS:
+    ===========
+    1) Emergency - stop motors immediately
+    2) Watch Video Stream
+    3) Land
+    4) Configure WiFi Password
+    5) Exit
+    6) Show Drone Status (Diagnostics)
+    T) Take Off (Press T key)
+    """)
     
     try:
         while not keyboard.is_pressed("5"):
